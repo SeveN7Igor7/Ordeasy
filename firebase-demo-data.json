@@ -1,0 +1,53 @@
+{
+  "users": {
+    "user_demo_123": {
+      "email": "admin@ordeasy.com",
+      "password": "123456",
+      "restaurantId": "rest_demo_456",
+      "restaurantSlug": "cantinho-do-rony",
+      "createdAt": 1703875200000
+    }
+  },
+  "restaurants": {
+    "rest_demo_456": {
+      "name": "Cantinho do Rony",
+      "slug": "cantinho-do-rony",
+      "ownerName": "Rony Silva",
+      "phone": "(11) 99999-9999",
+      "address": "Rua das Flores, 123 - Centro",
+      "description": "Culinária caseira com muito sabor",
+      "logo": "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=300&h=300&fit=crop&crop=center",
+      "ownerId": "user_demo_123",
+      "createdAt": 1703875200000,
+      "settings": {
+        "theme": {
+          "primaryColor": "#f97316",
+          "secondaryColor": "#ea580c",
+          "backgroundColor": "#fff7ed"
+        },
+        "business": {
+          "openTime": "08:00",
+          "closeTime": "22:00",
+          "deliveryFee": 5.0,
+          "minimumOrder": 20.0
+        },
+        "features": {
+          "enableDelivery": true,
+          "enablePickup": true,
+          "enablePayment": false,
+          "requireTableNumber": true
+        }
+      },
+      "tables": {
+        "table1": { "number": 1, "status": "available", "capacity": 2 },
+        "table2": { "number": 2, "status": "available", "capacity": 4 },
+        "table3": { "number": 3, "status": "available", "capacity": 6 },
+        "table4": { "number": 4, "status": "available", "capacity": 2 },
+        "table5": { "number": 5, "status": "available", "capacity": 4 }
+      },
+      "categories": {},
+      "menu": {},
+      "orders": {}
+    }
+  }
+}
