@@ -36,43 +36,73 @@ export default function TableManagement({ onTableSelect }: TableManagementProps)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
 
   useEffect(() => {
-    if (!restaurantId) return
+    if (!restaurantId) {
+      setLoading(false)
+      return
+    }
 
     setLoading(true)
     setError(null)
 
+    console.log("🪑 [TABLES] Buscando mesas do restaurante:", restaurantId)
     const tablesRef = ref(database, `restaurants/${restaurantId}/tables`)
     const unsubscribe = onValue(
       tablesRef,
       (snapshot) => {
+        console.log("🪑 [TABLES] Resposta do Firebase para mesas:", snapshot.exists())
         if (snapshot.exists()) {
-          const data = snapshot.val()
-          const tablesList = Object.entries(data).map(([id, table]: [string, any]) => ({
-            id,
-            ...table
-          }))
-          
-          // Ordenar por número da mesa
-          tablesList.sort((a, b) => {
-            const numA = parseInt(a.number.replace(/\D/g, ""))
-            const numB = parseInt(b.number.replace(/\D/g, ""))
-            return numA - numB
-          })
-          
-          setTables(tablesList)
+          try {
+            const data = snapshot.val()
+            if (!data) {
+              console.log("🪑 [TABLES] Dados de mesas vazios")
+              setTables([])
+              setLoading(false)
+              return
+            }
+            
+            console.log("🪑 [TABLES] Processando dados de mesas")
+            const tablesList = Object.entries(data).map(([id, table]: [string, any]) => ({
+              id,
+              ...table
+            }))
+            
+            // Ordenar por número da mesa
+            tablesList.sort((a, b) => {
+              try {
+                // Garantir que number seja uma string e tenha o método replace
+                const numA = typeof a.number === 'string' ? parseInt(a.number.replace(/\D/g, "") || "0") : 0;
+                const numB = typeof b.number === 'string' ? parseInt(b.number.replace(/\D/g, "") || "0") : 0;
+                return numA - numB;
+              } catch (err) {
+                console.error("🪑 [TABLES] Erro ao ordenar mesas:", err, "Valores:", a.number, b.number);
+                return 0; // Manter ordem original em caso de erro
+              }
+            })
+            
+            console.log("🪑 [TABLES] Mesas carregadas:", tablesList.length)
+            setTables(tablesList)
+          } catch (err) {
+            console.error("🪑 [TABLES] Erro ao processar dados:", err)
+            setError(`Erro ao processar dados: ${err}`)
+          }
         } else {
+          console.log("🪑 [TABLES] Nenhuma mesa encontrada")
           setTables([])
         }
         setLoading(false)
       },
       (error) => {
-        console.error("Erro ao carregar mesas:", error)
+        console.error("🪑 [TABLES] Erro ao carregar mesas:", error)
         setError(`Erro ao carregar dados: ${error.message}`)
         setLoading(false)
       }
     )
 
-    return () => unsubscribe()
+    // Garantir que o unsubscribe seja chamado na limpeza
+    return () => {
+      console.log("🪑 [TABLES] Cancelando inscrição de mesas")
+      unsubscribe()
+    }
   }, [restaurantId])
 
   const handleTableStatusChange = async (tableId: string, newStatus: Table["status"]) => {
@@ -185,26 +215,26 @@ export default function TableManagement({ onTableSelect }: TableManagementProps)
           </p>
         </div>
       ) : viewMode === "grid" ? (
-        <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div className="p-2 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2">
           {tables.map((table) => (
             <div
               key={table.id}
-              className={`border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
+              className={`border rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
                 getStatusColor(table.status)
               }`}
               onClick={() => onTableSelect && onTableSelect(table.id)}
             >
-              <div className="p-4 text-center">
-                <div className="text-2xl font-bold mb-1">Mesa {table.number}</div>
-                <div className="text-sm mb-2">{table.capacity} lugares</div>
-                <div className="flex items-center justify-center space-x-1 text-xs font-medium">
+              <div className="p-2 text-center">
+                <div className="text-lg font-bold">M{table.number}</div>
+                <div className="text-xs">{table.capacity}p</div>
+                <div className="flex items-center justify-center space-x-1 text-xs font-medium mt-1">
                   {getStatusIcon(table.status)}
-                  <span>{getStatusText(table.status)}</span>
+                  <span className="text-xs truncate">{getStatusText(table.status)}</span>
                 </div>
               </div>
-              <div className="bg-white p-2 border-t flex justify-between">
+              <div className="bg-white p-1 border-t flex justify-between">
                 <button
-                  className="text-xs px-2 py-1 rounded bg-green-50 text-green-600 hover:bg-green-100"
+                  className="text-xs px-1 py-0.5 rounded bg-green-50 text-green-600 hover:bg-green-100"
                   onClick={(e) => {
                     e.stopPropagation()
                     handleTableStatusChange(table.id, "available")
@@ -213,13 +243,13 @@ export default function TableManagement({ onTableSelect }: TableManagementProps)
                   Livre
                 </button>
                 <button
-                  className="text-xs px-2 py-1 rounded bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
+                  className="text-xs px-1 py-0.5 rounded bg-yellow-50 text-yellow-600 hover:bg-yellow-100"
                   onClick={(e) => {
                     e.stopPropagation()
                     handleTableStatusChange(table.id, "cleaning")
                   }}
                 >
-                  Limpeza
+                  Limp
                 </button>
               </div>
             </div>

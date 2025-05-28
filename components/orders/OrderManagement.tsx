@@ -93,17 +93,154 @@ export default function OrderManagement() {
     }
   }, [restaurantId])
 
+  // Variável para controlar a reprodução contínua do alarme
+  let alarmAudio = null;
+  let alarmInterval = null;
+
   const playNotificationSound = () => {
     try {
-      console.log("🔔 [ORDERS] Tocando som de notificação...")
-      const audio = new Audio(
-        "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmkeBzuG0fPTfSsFJn/M7+GNPQ0UVKTW68tgFQwvfsPwrG8fDjiD1/LNdSgFIHTC6d2QQAw",
-      )
-      audio.play().catch(() => {
-        console.log("🔇 [ORDERS] Não foi possível tocar o som")
-      })
+      console.log("🔔 [ORDERS] INICIANDO REPRODUÇÃO DO SOM DE NOTIFICAÇÃO...");
+      console.log("🔍 [AUDIO DEBUG] Verificando ambiente de áudio...");
+      console.log("🔍 [AUDIO DEBUG] Navegador suporta áudio:", typeof Audio !== 'undefined' ? "SIM" : "NÃO");
+      console.log("🔍 [AUDIO DEBUG] Contexto de janela disponível:", typeof window !== 'undefined' ? "SIM" : "NÃO");
+      
+      // Parar qualquer alarme anterior que possa estar tocando
+      console.log("🔄 [AUDIO DEBUG] Parando qualquer som anterior em reprodução...");
+      stopNotificationSound();
+      
+      // Criar novo elemento de áudio com o som de alarme forte (level-up-191997.mp3)
+      console.log("🔄 [AUDIO DEBUG] Criando novo elemento de áudio...");
+      alarmAudio = new Audio(
+        "data:audio/mp3;base64,//vQZAAIxttpqbMvZfJV7RMSACV8ZumozlW8AAGDvlJCgFAAACAgrJFJgp1J0p1F/QSQaCIvOfaJvNBctQ5kLcnBcZpi5Gis6bVznNc9miu23aY1+AKGgjr/PY0w5157GetytTZxqCHeSCxKFBmWWxfZnBXog3TGHmWBRvL1hK1LnGhkO2ryPXbnEv8VhRXNVskOmZJWJZPBRqxjbFypkNNck5oMcmcZxWbet0ftjC5LbI/pfHrGcosaLGesSGmuScnCLbnsaLPEiXpekNqetK24R5o0VyWUeH5MX9ZaqND99yYYFp8am5bPF6xtIXSUMQgHcwvzRyJQYAYEdjRiwKtfppgGTX9rzEkMB/aaem007O36oUeLkOiopmIf/s9CmHCguRf/qjM7fs7O2ZhQXIqf1RRIOhoOHDp926KZiH/p/9FQaJBgED9v/XKhaN/Vkh/85OWAAZjKgYUPDsPA8hqM8TAiAKwsHAhiBca6umwooCBiQFMFATFSkePzEAZHucGSjRi9CZBmIrlM8wIBVzLk8hUwjhgQHAUAVIt5OhGQ2SOTgchLxYplONBNMzeVCtIxNSWQAwSGKduAIIDkPxDj7rIAS0F1UE+HTf4v4vSckr3lzC7DqUlVrciQYNjgVB5KkGhUJnGx9/4fylCVBaRXlylaOpe3MuGmu2AvAyFAGgpGZqMhUIOG5aEttlN4AVnLNo/vU4Jd9FNKyJugp2im7QIAq1s7N34LzgI7btbrMrRkVrWEf1l7"
+      );
+      console.log("✅ [AUDIO DEBUG] Elemento de áudio criado com sucesso!");
+      
+      // Configurar volume máximo
+      console.log("🔄 [AUDIO DEBUG] Configurando volume para máximo (1.0)...");
+      alarmAudio.volume = 1.0;
+      console.log("✅ [AUDIO DEBUG] Volume configurado:", alarmAudio.volume);
+      
+      // Adicionar eventos para monitorar o áudio
+      alarmAudio.addEventListener('canplaythrough', () => {
+        console.log("✅ [AUDIO DEBUG] Áudio carregado e pronto para reprodução!");
+      });
+      
+      alarmAudio.addEventListener('play', () => {
+        console.log("▶️ [AUDIO DEBUG] Reprodução iniciada!");
+      });
+      
+      alarmAudio.addEventListener('ended', () => {
+        console.log("⏹️ [AUDIO DEBUG] Reprodução finalizada!");
+      });
+      
+      alarmAudio.addEventListener('error', (e) => {
+        console.error("❌ [AUDIO DEBUG] Erro no elemento de áudio:", e);
+      });
+      
+      // Reproduzir o som
+      console.log("🔄 [AUDIO DEBUG] Tentando iniciar reprodução...");
+      const playPromise = alarmAudio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log("✅ [AUDIO DEBUG] Reprodução iniciada com sucesso!");
+          })
+          .catch((err) => {
+            console.error("❌ [AUDIO DEBUG] Não foi possível tocar o som:", err);
+            console.error("❌ [AUDIO DEBUG] Código de erro:", err.code);
+            console.error("❌ [AUDIO DEBUG] Mensagem de erro:", err.message);
+            console.error("❌ [AUDIO DEBUG] Nome do erro:", err.name);
+            
+            // Verificar erros comuns
+            if (err.name === "NotAllowedError") {
+              console.error("❌ [AUDIO DEBUG] Erro de permissão: O navegador bloqueou a reprodução automática");
+            } else if (err.name === "NotSupportedError") {
+              console.error("❌ [AUDIO DEBUG] Formato de áudio não suportado pelo navegador");
+            }
+          });
+      } else {
+        console.log("⚠️ [AUDIO DEBUG] Play promise indefinido - comportamento antigo do navegador");
+      }
+      
+      // Configurar reprodução contínua
+      console.log("🔄 [AUDIO DEBUG] Configurando reprodução contínua a cada 2 segundos...");
+      alarmInterval = setInterval(() => {
+        if (alarmAudio) {
+          console.log("🔄 [AUDIO DEBUG] Reiniciando reprodução contínua...");
+          alarmAudio.currentTime = 0;
+          
+          const loopPromise = alarmAudio.play();
+          if (loopPromise !== undefined) {
+            loopPromise
+              .then(() => {
+                console.log("✅ [AUDIO DEBUG] Loop de reprodução iniciado com sucesso!");
+              })
+              .catch((err) => {
+                console.error("❌ [AUDIO DEBUG] Erro no loop de reprodução:", err);
+              });
+          }
+        }
+      }, 2000); // Repetir a cada 2 segundos
+      
+      // Adicionar listener para evento personalizado para parar o alarme
+      if (window && typeof window !== 'undefined') {
+        console.log("🔄 [AUDIO DEBUG] Adicionando listener para evento de parada...");
+        window.addEventListener('stopNotificationAlarm', stopNotificationSound);
+        console.log("✅ [AUDIO DEBUG] Listener adicionado com sucesso!");
+      }
+      
+      console.log("🔊 [ORDERS] ALARME SONORO CONTÍNUO INICIADO COM SUCESSO!");
     } catch (error) {
-      console.log("🔇 [ORDERS] Erro ao tocar som:", error)
+      console.error("❌ [AUDIO DEBUG] ERRO CRÍTICO NA REPRODUÇÃO:", error);
+      console.error("❌ [AUDIO DEBUG] Tipo de erro:", typeof error);
+      console.error("❌ [AUDIO DEBUG] Stack trace:", error.stack);
+    }
+  }
+  
+  const stopNotificationSound = () => {
+    try {
+      console.log("🔄 [AUDIO DEBUG] Iniciando processo de parada do alarme sonoro...");
+      
+      if (alarmInterval) {
+        console.log("🔄 [AUDIO DEBUG] Limpando intervalo de repetição...");
+        clearInterval(alarmInterval);
+        alarmInterval = null;
+        console.log("✅ [AUDIO DEBUG] Intervalo de repetição removido com sucesso!");
+      } else {
+        console.log("ℹ️ [AUDIO DEBUG] Nenhum intervalo de repetição ativo para remover.");
+      }
+      
+      if (alarmAudio) {
+        console.log("🔄 [AUDIO DEBUG] Pausando reprodução de áudio...");
+        alarmAudio.pause();
+        console.log("✅ [AUDIO DEBUG] Reprodução de áudio pausada com sucesso!");
+        
+        // Remover listeners de eventos
+        console.log("🔄 [AUDIO DEBUG] Removendo event listeners do elemento de áudio...");
+        alarmAudio.removeEventListener('canplaythrough', () => {});
+        alarmAudio.removeEventListener('play', () => {});
+        alarmAudio.removeEventListener('ended', () => {});
+        alarmAudio.removeEventListener('error', () => {});
+        
+        alarmAudio = null;
+        console.log("✅ [AUDIO DEBUG] Elemento de áudio liberado da memória!");
+      } else {
+        console.log("ℹ️ [AUDIO DEBUG] Nenhum elemento de áudio ativo para pausar.");
+      }
+      
+      // Remover o listener do evento
+      if (window && typeof window !== 'undefined') {
+        console.log("🔄 [AUDIO DEBUG] Removendo listener do evento de parada...");
+        window.removeEventListener('stopNotificationAlarm', stopNotificationSound);
+        console.log("✅ [AUDIO DEBUG] Listener removido com sucesso!");
+      }
+      
+      console.log("🔇 [ORDERS] ALARME SONORO INTERROMPIDO COM SUCESSO!");
+    } catch (error) {
+      console.error("❌ [AUDIO DEBUG] ERRO AO INTERROMPER SOM:", error);
+      console.error("❌ [AUDIO DEBUG] Tipo de erro:", typeof error);
+      console.error("❌ [AUDIO DEBUG] Stack trace:", error.stack);
     }
   }
 
@@ -336,33 +473,31 @@ export default function OrderManagement() {
               {filteredOrders.map((order) => (
                 <li
                   key={order.id}
-                  className={`p-4 hover:bg-gray-50 cursor-pointer ${
+                  className={`py-2 px-2 hover:bg-gray-50 cursor-pointer ${
                     selectedOrder?.id === order.id ? "bg-orange-50" : ""
                   }`}
                   onClick={() => setSelectedOrder(order)}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <span className="font-medium text-gray-900">Mesa {order.tableNumber}</span>
-                      <span className="ml-2 text-sm text-gray-500">
-                        {new Date(order.timestamp).toLocaleTimeString()}
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <span className="font-medium text-gray-900 text-sm">M{order.tableNumber}</span>
+                      <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${getStatusColor(order.status)}`}>
+                        {getStatusText(order.status).substring(0, 3)}
                       </span>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(order.status)}`}>
-                      {getStatusText(order.status)}
+                    <span className="text-xs text-gray-500">
+                      {new Date(order.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-700 mb-1">
-                    <span className="font-medium">Cliente:</span> {order.customerName}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    <span className="font-medium">Total:</span> R$ {order.total.toFixed(2)}
-                  </p>
+                  <div className="flex justify-between items-center mt-1 text-xs">
+                    <span className="truncate max-w-[120px]">{order.customerName}</span>
+                    <span className="font-medium">R$ {(order.total || 0).toFixed(2)}</span>
+                  </div>
                   {order.estimatedTime && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      <Clock className="h-3 w-3 inline mr-1" />
-                      Tempo estimado: {order.estimatedTime} min
-                    </p>
+                    <div className="flex items-center text-xs text-orange-600 mt-0.5">
+                      <Clock className="h-2.5 w-2.5 mr-0.5" />
+                      <span>{order.estimatedTime} min</span>
+                    </div>
                   )}
                 </li>
               ))}
@@ -413,7 +548,7 @@ export default function OrderManagement() {
                     </p>
                     <p className="mb-2">
                       <span className="font-medium">Valor total:</span> R${" "}
-                      {selectedOrder.total.toFixed(2)}
+                      {(selectedOrder.total || 0).toFixed(2)}
                     </p>
                     {selectedOrder.customerNote && (
                       <p>
@@ -453,10 +588,10 @@ export default function OrderManagement() {
                             {item.quantity}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                            R$ {item.price.toFixed(2)}
+                            R$ {(item.price || 0).toFixed(2)}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                            R$ {(item.price * item.quantity).toFixed(2)}
+                            R$ {((item.price || 0) * (item.quantity || 0)).toFixed(2)}
                           </td>
                         </tr>
                       ))}
@@ -467,7 +602,7 @@ export default function OrderManagement() {
                           Total
                         </td>
                         <td className="px-4 py-3 text-sm font-bold text-gray-900 text-right">
-                          R$ {selectedOrder.total.toFixed(2)}
+                          R$ {(selectedOrder.total || 0).toFixed(2)}
                         </td>
                       </tr>
                     </tfoot>

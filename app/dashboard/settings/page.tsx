@@ -772,24 +772,26 @@ export default function RestaurantSettings() {
                     />
                   </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">URL da Logo</label>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Logo do Restaurante</label>
                     <input
-                      type="url"
+                      type="text"
                       value={restaurantInfo.logo}
                       onChange={(e) => setRestaurantInfo({ ...restaurantInfo, logo: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       placeholder="https://exemplo.com/logo.png"
                     />
+                    <p className="text-xs text-gray-500 mt-1">URL da imagem do logo (recomendado: 200x200px)</p>
                     {restaurantInfo.logo && (
-                      <div className="mt-3">
-                        <p className="text-sm text-gray-600 mb-2">Pré-visualização:</p>
-                        <Image
-                          src={restaurantInfo.logo || "/placeholder.svg"}
-                          alt="Logo"
-                          width={80}
-                          height={80}
-                          className="rounded-full border"
+                      <div className="mt-2">
+                        <img
+                          src={restaurantInfo.logo}
+                          alt="Logo do restaurante"
+                          className="h-24 w-24 object-contain rounded-md border"
+                          onError={(e) => {
+                            console.log("🖼️ [SETTINGS] Erro ao carregar logo do restaurante");
+                            e.currentTarget.src = "/placeholder.svg?height=96&width=96";
+                          }}
                         />
                       </div>
                     )}

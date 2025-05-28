@@ -369,8 +369,21 @@ export default function RestaurantMenu() {
                               <p className="mt-1 text-sm text-gray-500">{item.description}</p>
                             )}
                             <p className="mt-1 text-sm font-medium text-gray-900">
-                              {formatCurrency(item.price)}
+                              {formatCurrency(item.price || 0)}
                             </p>
+                            {item.image && (
+                              <div className="mt-2">
+                                <img 
+                                  src={item.image} 
+                                  alt={item.name}
+                                  className="h-20 w-20 object-cover rounded-md"
+                                  onError={(e) => {
+                                    console.log("🖼️ [MENU] Erro ao carregar imagem do produto:", item.id);
+                                    e.currentTarget.src = "/placeholder.svg?height=80&width=80";
+                                  }}
+                                />
+                              </div>
+                            )}
                           </div>
                           
                           <div className="flex items-center space-x-2">
