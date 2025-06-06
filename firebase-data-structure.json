@@ -1,0 +1,145 @@
+{
+  "restaurants": {
+    "restaurante-exemplo": {
+      "name": "Restaurante Exemplo",
+      "logo": "/placeholder.svg?height=80&width=80",
+      "description": "Culinária brasileira com toque especial",
+      "address": "Rua das Flores, 123 - Centro",
+      "phone": "(11) 99999-9999",
+      "menu": {
+        "item1": {
+          "name": "Hambúrguer Artesanal",
+          "description": "Hambúrguer 180g com queijo, alface, tomate e molho especial",
+          "price": 25.9,
+          "category": "Lanches",
+          "image": "/placeholder.svg?height=100&width=100",
+          "available": true
+        },
+        "item2": {
+          "name": "Pizza Margherita",
+          "description": "Molho de tomate, mussarela, manjericão e azeite",
+          "price": 32.0,
+          "category": "Pizzas",
+          "image": "/placeholder.svg?height=100&width=100",
+          "available": true
+        },
+        "item3": {
+          "name": "Lasanha Bolonhesa",
+          "description": "Massa fresca, molho bolonhesa e queijo gratinado",
+          "price": 28.5,
+          "category": "Massas",
+          "image": "/placeholder.svg?height=100&width=100",
+          "available": true
+        },
+        "item4": {
+          "name": "Salmão Grelhado",
+          "description": "Salmão grelhado com legumes e arroz integral",
+          "price": 45.0,
+          "category": "Peixes",
+          "image": "/placeholder.svg?height=100&width=100",
+          "available": true
+        },
+        "item5": {
+          "name": "Coca-Cola 350ml",
+          "description": "Refrigerante gelado",
+          "price": 5.5,
+          "category": "Bebidas",
+          "image": "/placeholder.svg?height=100&width=100",
+          "available": true
+        },
+        "item6": {
+          "name": "Suco de Laranja",
+          "description": "Suco natural de laranja 300ml",
+          "price": 8.0,
+          "category": "Bebidas",
+          "image": "/placeholder.svg?height=100&width=100",
+          "available": true
+        },
+        "item7": {
+          "name": "Pudim de Leite",
+          "description": "Pudim caseiro com calda de caramelo",
+          "price": 12.0,
+          "category": "Sobremesas",
+          "image": "/placeholder.svg?height=100&width=100",
+          "available": true
+        },
+        "item8": {
+          "name": "Brownie com Sorvete",
+          "description": "Brownie quente com sorvete de baunilha",
+          "price": 15.5,
+          "category": "Sobremesas",
+          "image": "/placeholder.svg?height=100&width=100",
+          "available": true
+        }
+      },
+      "orders": {
+        "order1": {
+          "restaurantId": "restaurante-exemplo",
+          "tableNumber": "3",
+          "items": [
+            {
+              "id": "item1",
+              "name": "Hambúrguer Artesanal",
+              "price": 25.9,
+              "quantity": 2
+            },
+            {
+              "id": "item5",
+              "name": "Coca-Cola 350ml",
+              "price": 5.5,
+              "quantity": 2
+            }
+          ],
+          "total": 62.8,
+          "status": "preparing",
+          "timestamp": 1703875200000,
+          "customerNote": ""
+        },
+        "order2": {
+          "restaurantId": "restaurante-exemplo",
+          "tableNumber": "7",
+          "items": [
+            {
+              "id": "item2",
+              "name": "Pizza Margherita",
+              "price": 32.0,
+              "quantity": 1
+            },
+            {
+              "id": "item6",
+              "name": "Suco de Laranja",
+              "price": 8.0,
+              "quantity": 1
+            }
+          ],
+          "total": 40.0,
+          "status": "pending",
+          "timestamp": 1703875800000,
+          "customerNote": ""
+        },
+        "order3": {
+          "restaurantId": "restaurante-exemplo",
+          "tableNumber": "12",
+          "items": [
+            {
+              "id": "item4",
+              "name": "Salmão Grelhado",
+              "price": 45.0,
+              "quantity": 1
+            },
+            {
+              "id": "item7",
+              "name": "Pudim de Leite",
+              "price": 12.0,
+              "quantity": 1
+            }
+          ],
+          "total": 57.0,
+          "status": "ready",
+          "timestamp": 1703876400000,
+          "customerNote": ""
+        }
+      }
+    }
+  }
+}
