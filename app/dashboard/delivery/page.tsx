@@ -17,11 +17,19 @@ import {
   Calendar,
   CalendarDays,
   CalendarRange,
-  BarChart3
+  BarChart3,
+  Eye,
+  Edit,
+  Trash2,
+  Plus,
+  Minus,
+  X
 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { 
   BarChart, 
   Bar, 
@@ -44,6 +52,9 @@ export default function DeliveryDashboard() {
   const [activeTab, setActiveTab] = useState<"all" | "delivery" | "pickup">("all")
   const [showNotification, setShowNotification] = useState(false)
   const [newOrder, setNewOrder] = useState<any>(null)
+  const [selectedOrder, setSelectedOrder] = useState<any>(null)
+  const [showOrderDetails, setShowOrderDetails] = useState(false)
+  const [editingOrder, setEditingOrder] = useState<any>(null)
   const [stats, setStats] = useState({
     pendingCount: 0,
     todayCount: 0,
@@ -203,6 +214,45 @@ export default function DeliveryDashboard() {
     }
   }
 
+  // Atualizar pedido completo
+  const updateOrder = async (orderId: string, updates: any) => {
+    try {
+      const orderRef = ref(database, `restaurants/${restaurantId}/deliveryOrders/${orderId}`)
+      await update(orderRef, updates)
+      setEditingOrder(null)
+      setShowOrderDetails(false)
+    } catch (error) {
+      console.error("Erro ao atualizar pedido:", error)
+    }
+  }
+
+  // Remover item do pedido
+  const removeItemFromOrder = async (orderId: string, itemIndex: number) => {
+    const order = orders.find(o => o.id === orderId)
+    if (!order) return
+
+    const updatedItems = order.items.filter((_: any, index: number) => index !== itemIndex)
+    const newTotal = updatedItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0)
+
+    await updateOrder(orderId, {
+      items: updatedItems,
+      totalAmount: newTotal
+    })
+  }
+
+  // Adicionar desconto
+  const addDiscount = async (orderId: string, discountAmount: number) => {
+    const order = orders.find(o => o.id === orderId)
+    if (!order) return
+
+    const newTotal = Math.max(0, order.totalAmount - discountAmount)
+
+    await updateOrder(orderId, {
+      totalAmount: newTotal,
+      discount: discountAmount
+    })
+  }
+
   // Aceitar pedido
   const handleAcceptOrder = (orderId: string) => {
     updateOrderStatus(orderId, "confirmed")
@@ -238,6 +288,19 @@ export default function DeliveryDashboard() {
     setShowNotification(false)
   }
 
+  // Ver detalhes do pedido
+  const handleViewOrder = (order: any) => {
+    setSelectedOrder(order)
+    setShowOrderDetails(true)
+  }
+
+  // Editar pedido
+  const handleEditOrder = (order: any) => {
+    setEditingOrder({ ...order })
+    setSelectedOrder(order)
+    setShowOrderDetails(true)
+  }
+
   // Dados para o gráfico de status dos pedidos
   const statusData = [
     { name: 'Pendentes', value: orders.filter(order => order.status === "pending").length, color: '#f59e0b' },
@@ -254,6 +317,32 @@ export default function DeliveryDashboard() {
     { name: 'Retirada', value: stats.pickupCount, color: '#3b82f6' }
   ].filter(item => item.value > 0)
 
+  // Obter cor do status
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800'
+      case 'confirmed': return 'bg-blue-100 text-blue-800'
+      case 'preparing': return 'bg-purple-100 text-purple-800'
+      case 'out_for_delivery': return 'bg-orange-100 text-orange-800'
+      case 'completed': return 'bg-green-100 text-green-800'
+      case 'rejected': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  // Obter texto do status
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending': return 'Pendente'
+      case 'confirmed': return 'Confirmado'
+      case 'preparing': return 'Preparando'
+      case 'out_for_delivery': return 'Em Entrega'
+      case 'completed': return 'Completo'
+      case 'rejected': return 'Rejeitado'
+      default: return status
+    }
+  }
+
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       {/* Notificação de novo pedido */}
@@ -264,6 +353,275 @@ export default function DeliveryDashboard() {
           onReject={handleRejectOrder}
           onClose={handleCloseNotification}
         />
+      )}
+
+      {/* Modal de detalhes do pedido */}
+      {showOrderDetails && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Cabeçalho */}
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                {editingOrder ? 'Editar Pedido' : 'Detalhes do Pedido'}
+              </h2>
+              <div className="flex items-center space-x-2">
+                {!editingOrder && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditOrder(selectedOrder)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
+                  </Button>
+                )}
+                <button
+                  onClick={() => {
+                    setShowOrderDetails(false)
+                    setEditingOrder(null)
+                  }}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Conteúdo */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Informações do cliente */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="font-medium text-gray-900 mb-3">Informações do Cliente</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Nome</label>
+                    {editingOrder ? (
+                      <Input
+                        value={editingOrder.customerName}
+                        onChange={(e) => setEditingOrder({
+                          ...editingOrder,
+                          customerName: e.target.value
+                        })}
+                      />
+                    ) : (
+                      <p className="text-gray-900">{selectedOrder.customerName}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Telefone</label>
+                    {editingOrder ? (
+                      <Input
+                        value={editingOrder.customerPhone}
+                        onChange={(e) => setEditingOrder({
+                          ...editingOrder,
+                          customerPhone: e.target.value
+                        })}
+                      />
+                    ) : (
+                      <p className="text-gray-900">{selectedOrder.customerPhone}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Endereço (se for delivery) */}
+              {selectedOrder.orderType === 'delivery' && selectedOrder.address && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-medium text-gray-900 mb-3">Endereço de Entrega</h3>
+                  <p className="text-gray-900">
+                    {selectedOrder.address.street}, {selectedOrder.address.number}
+                    {selectedOrder.address.complement && `, ${selectedOrder.address.complement}`}
+                  </p>
+                  <p className="text-gray-900">
+                    {selectedOrder.address.neighborhood}, {selectedOrder.address.city} - {selectedOrder.address.state}
+                  </p>
+                  <p className="text-gray-900">CEP: {selectedOrder.address.cep}</p>
+                </div>
+              )}
+
+              {/* Itens do pedido */}
+              <div>
+                <h3 className="font-medium text-gray-900 mb-3">Itens do Pedido</h3>
+                <div className="space-y-2">
+                  {(editingOrder || selectedOrder).items.map((item: any, index: number) => (
+                    <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <span className="font-medium">{item.quantity}x {item.name}</span>
+                        {item.description && (
+                          <p className="text-sm text-gray-600">{item.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium">{formatCurrency(item.price * item.quantity)}</span>
+                        {editingOrder && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeItemFromOrder(selectedOrder.id, index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Informações do pedido */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Tipo de Pedido</label>
+                  <p className="text-gray-900 capitalize">
+                    {selectedOrder.orderType === 'delivery' ? 'Delivery' : 'Retirada'}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Forma de Pagamento</label>
+                  <p className="text-gray-900">{selectedOrder.paymentMethod}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Status</label>
+                  <span className={`inline-block px-2 py-1 text-xs rounded-full ${getStatusColor(selectedOrder.status)}`}>
+                    {getStatusText(selectedOrder.status)}
+                  </span>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Data/Hora</label>
+                  <p className="text-gray-900">{formatDate(selectedOrder.timestamp)}</p>
+                </div>
+              </div>
+
+              {/* Observações */}
+              {selectedOrder.additionalInfo && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                  {editingOrder ? (
+                    <Textarea
+                      value={editingOrder.additionalInfo}
+                      onChange={(e) => setEditingOrder({
+                        ...editingOrder,
+                        additionalInfo: e.target.value
+                      })}
+                      rows={3}
+                    />
+                  ) : (
+                    <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{selectedOrder.additionalInfo}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Total */}
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-medium text-gray-900">Total</span>
+                  <span className="text-xl font-bold text-orange-600">
+                    {formatCurrency((editingOrder || selectedOrder).totalAmount)}
+                  </span>
+                </div>
+                {selectedOrder.discount && (
+                  <div className="flex justify-between items-center text-sm text-gray-600 mt-1">
+                    <span>Desconto aplicado</span>
+                    <span>-{formatCurrency(selectedOrder.discount)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Adicionar desconto */}
+              {editingOrder && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 mb-2">Adicionar Desconto</h4>
+                  <div className="flex space-x-2">
+                    <Input
+                      type="number"
+                      placeholder="Valor do desconto"
+                      id="discount-input"
+                    />
+                    <Button
+                      onClick={() => {
+                        const input = document.getElementById('discount-input') as HTMLInputElement
+                        const discount = parseFloat(input.value)
+                        if (discount > 0) {
+                          addDiscount(selectedOrder.id, discount)
+                          input.value = ''
+                        }
+                      }}
+                    >
+                      Aplicar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Rodapé */}
+            <div className="border-t border-gray-200 p-6">
+              <div className="flex justify-between">
+                {editingOrder ? (
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditingOrder(null)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={() => updateOrder(selectedOrder.id, editingOrder)}
+                      className="bg-orange-500 hover:bg-orange-600"
+                    >
+                      Salvar Alterações
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex space-x-2">
+                    {selectedOrder.status === 'pending' && (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleRejectOrder(selectedOrder.id)}
+                          className="text-red-600 border-red-600 hover:bg-red-50"
+                        >
+                          Rejeitar
+                        </Button>
+                        <Button
+                          onClick={() => handleAcceptOrder(selectedOrder.id)}
+                          className="bg-green-500 hover:bg-green-600"
+                        >
+                          Aceitar
+                        </Button>
+                      </>
+                    )}
+                    {selectedOrder.status === 'confirmed' && (
+                      <Button
+                        onClick={() => handlePreparing(selectedOrder.id)}
+                        className="bg-purple-500 hover:bg-purple-600"
+                      >
+                        Marcar como Preparando
+                      </Button>
+                    )}
+                    {selectedOrder.status === 'preparing' && selectedOrder.orderType === 'delivery' && (
+                      <Button
+                        onClick={() => handleOutForDelivery(selectedOrder.id)}
+                        className="bg-orange-500 hover:bg-orange-600"
+                      >
+                        Saiu para Entrega
+                      </Button>
+                    )}
+                    {(selectedOrder.status === 'preparing' && selectedOrder.orderType === 'pickup') ||
+                     selectedOrder.status === 'out_for_delivery' && (
+                      <Button
+                        onClick={() => handleComplete(selectedOrder.id)}
+                        className="bg-green-500 hover:bg-green-600"
+                      >
+                        Marcar como Completo
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       
       {/* Cabeçalho */}
@@ -468,18 +826,18 @@ export default function DeliveryDashboard() {
                 Cliente
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Data/Hora
+                Tipo
               </th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Itens
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Total
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Total
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Data/Hora
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Ações
               </th>
             </tr>
@@ -487,121 +845,93 @@ export default function DeliveryDashboard() {
           <tbody className="bg-white divide-y divide-gray-200">
             {orders.map((order) => (
               <tr key={order.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">
+                <td className="px-4 py-4 whitespace-nowrap">
                   <div>
-                    <div className="font-medium text-gray-900">{order.customerName}</div>
+                    <div className="text-sm font-medium text-gray-900">{order.customerName}</div>
                     <div className="text-sm text-gray-500">{order.customerPhone}</div>
-                    {order.orderType === "delivery" && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">
-                          <Truck className="h-3 w-3 mr-1" />
-                          Delivery
-                        </span>
-                      </div>
-                    )}
-                    {order.orderType === "pickup" && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                          <Home className="h-3 w-3 mr-1" />
-                          Retirada
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-500">
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    {order.orderType === 'delivery' ? (
+                      <Truck className="h-4 w-4 text-orange-500 mr-2" />
+                    ) : (
+                      <Home className="h-4 w-4 text-blue-500 mr-2" />
+                    )}
+                    <span className="text-sm text-gray-900 capitalize">
+                      {order.orderType === 'delivery' ? 'Delivery' : 'Retirada'}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
+                    {getStatusText(order.status)}
+                  </span>
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {formatCurrency(order.totalAmount)}
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                   {formatDate(order.timestamp)}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-500 text-center">
-                  {order.items?.length || 0}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                  {formatCurrency(order.totalAmount || 0)}
-                </td>
-                <td className="px-4 py-3 text-sm text-center">
-                  {order.status === "pending" && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                      <AlertTriangle className="h-3 w-3 mr-1" />
-                      Pendente
-                    </span>
-                  )}
-                  {order.status === "confirmed" && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Confirmado
-                    </span>
-                  )}
-                  {order.status === "preparing" && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                      <Clock className="h-3 w-3 mr-1" />
-                      Preparando
-                    </span>
-                  )}
-                  {order.status === "out_for_delivery" && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                      <Truck className="h-3 w-3 mr-1" />
-                      Saiu para entrega
-                    </span>
-                  )}
-                  {order.status === "completed" && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Completo
-                    </span>
-                  )}
-                  {order.status === "rejected" && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      <XCircle className="h-3 w-3 mr-1" />
-                      Rejeitado
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-sm text-center">
-                  <div className="flex justify-center space-x-2">
-                    {order.status === "pending" && (
+                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewOrder(order)}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    
+                    {order.status === 'pending' && (
                       <>
                         <Button
-                          size="sm"
                           variant="outline"
-                          className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100 hover:text-red-700"
+                          size="sm"
                           onClick={() => handleRejectOrder(order.id)}
+                          className="text-red-600 border-red-600 hover:bg-red-50"
                         >
-                          Rejeitar
+                          <XCircle className="h-4 w-4" />
                         </Button>
                         <Button
                           size="sm"
                           onClick={() => handleAcceptOrder(order.id)}
+                          className="bg-green-500 hover:bg-green-600"
                         >
-                          Confirmar
+                          <CheckCircle className="h-4 w-4" />
                         </Button>
                       </>
                     )}
                     
-                    {order.status === "confirmed" && (
+                    {order.status === 'confirmed' && (
                       <Button
                         size="sm"
                         onClick={() => handlePreparing(order.id)}
+                        className="bg-purple-500 hover:bg-purple-600"
                       >
-                        Preparando
+                        <Clock className="h-4 w-4" />
                       </Button>
                     )}
                     
-                    {order.status === "preparing" && order.orderType === "delivery" && (
+                    {order.status === 'preparing' && order.orderType === 'delivery' && (
                       <Button
                         size="sm"
                         onClick={() => handleOutForDelivery(order.id)}
+                        className="bg-orange-500 hover:bg-orange-600"
                       >
-                        Saiu para entrega
+                        <Truck className="h-4 w-4" />
                       </Button>
                     )}
                     
-                    {(order.status === "preparing" && order.orderType === "pickup") || 
-                     (order.status === "out_for_delivery") && (
+                    {((order.status === 'preparing' && order.orderType === 'pickup') ||
+                      order.status === 'out_for_delivery') && (
                       <Button
                         size="sm"
                         onClick={() => handleComplete(order.id)}
+                        className="bg-green-500 hover:bg-green-600"
                       >
-                        Completar
+                        <CheckCircle className="h-4 w-4" />
                       </Button>
                     )}
                   </div>

@@ -8,6 +8,7 @@ import OrderConfirmation from "@/components/menu/OrderConfirmation"
 import OrderStatusFeedback from "@/components/menu/OrderStatusFeedback"
 import OrderTypeSelection from "@/components/menu/OrderTypeSelection"
 import DeliveryOrderConfirmation from "@/components/menu/DeliveryOrderConfirmation"
+import { useCustomerAuth } from "@/lib/customer-auth-context"
 import { 
   ShoppingCart, 
   Plus, 
@@ -15,8 +16,10 @@ import {
   Search,
   Filter,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  User
 } from "lucide-react"
+import Link from "next/link"
 
 export default function RestaurantMenu() {
   const params = useParams()
@@ -38,6 +41,7 @@ export default function RestaurantMenu() {
   const [showOrderStatus, setShowOrderStatus] = useState(false)
   const [showOrderTypeSelection, setShowOrderTypeSelection] = useState(true)
   const [orderType, setOrderType] = useState<"qrcode" | "delivery" | "pickup" | null>(null)
+  const { user: customerUser, loading: customerLoading } = useCustomerAuth()
   
   // Carregar dados do restaurante e cardápio
   useEffect(() => {
@@ -285,14 +289,33 @@ export default function RestaurantMenu() {
       <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">{restaurant.name}</h1>
-              {restaurant.description && (
-                <p className="text-sm text-gray-500">{restaurant.description}</p>
+            <div className="flex items-center space-x-4">
+              {/* Logo do restaurante */}
+              {restaurant.logoUrl && (
+                <img 
+                  src={restaurant.logoUrl} 
+                  alt={`Logo ${restaurant.name}`}
+                  className="h-12 w-12 object-cover rounded-lg"
+                />
               )}
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">{restaurant.name}</h1>
+                {restaurant.description && (
+                  <p className="text-sm text-gray-500">{restaurant.description}</p>
+                )}
+              </div>
             </div>
             
-            <div className="relative">
+            <div className="relative flex items-center space-x-4">
+              {customerUser ? (
+                <Link href="/cliente/perfil" className="text-gray-600 hover:text-gray-800">
+                  <User className="h-6 w-6" />
+                </Link>
+              ) : (
+                <Link href="/cliente" className="text-gray-600 hover:text-gray-800">
+                  <User className="h-6 w-6" />
+                </Link>
+              )}
               <button
                 className="relative bg-orange-500 text-white p-3 rounded-full shadow-md hover:bg-orange-600 transition-colors"
                 onClick={handleOrderButtonClick}

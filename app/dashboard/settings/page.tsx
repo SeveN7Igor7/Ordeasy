@@ -21,7 +21,10 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 
 interface RestaurantSettings {
   theme: {
@@ -32,8 +35,13 @@ interface RestaurantSettings {
   business: {
     openTime: string
     closeTime: string
+    deliveryCloseTime: string
+    pickupCloseTime: string
     deliveryFee: number
     minimumOrder: number
+    disableOnlineMenu: boolean
+    suspendDelivery: boolean
+    suspendPickup: boolean
   }
   features: {
     enableDelivery: boolean
@@ -72,8 +80,13 @@ export default function RestaurantSettings() {
     business: {
       openTime: "08:00",
       closeTime: "22:00",
+      deliveryCloseTime: "22:00",
+      pickupCloseTime: "22:00",
       deliveryFee: 5.0,
       minimumOrder: 20.0,
+      disableOnlineMenu: false,
+      suspendDelivery: false,
+      suspendPickup: false,
     },
     features: {
       enableDelivery: true,
@@ -134,7 +147,17 @@ export default function RestaurantSettings() {
             console.log("⚙️ [CONFIGURAÇÕES] Configurações encontradas:", data.settings)
             setSettings({
               theme: data.settings.theme || settings.theme,
-              business: data.settings.business || settings.business,
+              business: {
+                openTime: data.settings.business?.openTime || settings.business.openTime,
+                closeTime: data.settings.business?.closeTime || settings.business.closeTime,
+                deliveryCloseTime: data.settings.business?.deliveryCloseTime || settings.business.deliveryCloseTime,
+                pickupCloseTime: data.settings.business?.pickupCloseTime || settings.business.pickupCloseTime,
+                deliveryFee: data.settings.business?.deliveryFee || settings.business.deliveryFee,
+                minimumOrder: data.settings.business?.minimumOrder || settings.business.minimumOrder,
+                disableOnlineMenu: data.settings.business?.disableOnlineMenu ?? settings.business.disableOnlineMenu,
+                suspendDelivery: data.settings.business?.suspendDelivery ?? settings.business.suspendDelivery,
+                suspendPickup: data.settings.business?.suspendPickup ?? settings.business.suspendPickup,
+              },
               features: data.settings.features || settings.features,
             })
           } else {
@@ -519,139 +542,187 @@ export default function RestaurantSettings() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Configurações do Negócio</h3>
-                  {/* Presets de Configuração */}
-                  <div className="bg-blue-50 p-4 rounded-lg mb-6">
-                    <h4 className="font-medium text-blue-900 mb-3">Configurações Rápidas</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <button
-                        onClick={() =>
-                          setSettings({
-                            ...settings,
-                            business: {
-                              openTime: "07:00",
-                              closeTime: "15:00",
-                              deliveryFee: 3.0,
-                              minimumOrder: 15.0,
-                            },
-                          })
-                        }
-                        className="bg-white p-3 rounded border text-left hover:bg-blue-50 transition-colors"
-                      >
-                        <p className="font-medium text-sm">Café da Manhã</p>
-                        <p className="text-xs text-gray-600">7h às 15h - Entrega R$3</p>
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          setSettings({
-                            ...settings,
-                            business: {
-                              openTime: "11:00",
-                              closeTime: "23:00",
-                              deliveryFee: 5.0,
-                              minimumOrder: 25.0,
-                            },
-                          })
-                        }
-                        className="bg-white p-3 rounded border text-left hover:bg-blue-50 transition-colors"
-                      >
-                        <p className="font-medium text-sm">Restaurante</p>
-                        <p className="text-xs text-gray-600">11h às 23h - Entrega R$5</p>
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          setSettings({
-                            ...settings,
-                            business: {
-                              openTime: "18:00",
-                              closeTime: "02:00",
-                              deliveryFee: 8.0,
-                              minimumOrder: 30.0,
-                            },
-                          })
-                        }
-                        className="bg-white p-3 rounded border text-left hover:bg-blue-50 transition-colors"
-                      >
-                        <p className="font-medium text-sm">Delivery Noturno</p>
-                        <p className="text-xs text-gray-600">18h às 2h - Entrega R$8</p>
-                      </button>
-                    </div>
-                  </div>
                   <p className="text-gray-600 mb-6">
-                    Configure horários de funcionamento, taxas e valores mínimos para seu restaurante.
+                    Defina os horários de funcionamento e configurações operacionais do seu restaurante.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Horário de Abertura</label>
-                    <input
-                      type="time"
-                      value={settings.business.openTime}
-                      onChange={(e) =>
+                {/* Presets de Configuração */}
+                <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                  <h4 className="font-medium text-blue-900 mb-3">Configurações Rápidas</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <button
+                      onClick={() =>
                         setSettings({
                           ...settings,
-                          business: { ...settings.business, openTime: e.target.value },
+                          business: {
+                            ...settings.business,
+                            openTime: "07:00",
+                            closeTime: "15:00",
+                            deliveryFee: 3.0,
+                            minimumOrder: 15.0,
+                          },
                         })
                       }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    />
-                  </div>
+                      className="bg-white p-3 rounded border text-left hover:bg-blue-50 transition-colors"
+                    >
+                      <p className="font-medium text-sm">Café da Manhã</p>
+                      <p className="text-xs text-gray-600">7h às 15h - Entrega R$3</p>
+                    </button>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Horário de Fechamento</label>
-                    <input
-                      type="time"
-                      value={settings.business.closeTime}
-                      onChange={(e) =>
+                    <button
+                      onClick={() =>
                         setSettings({
                           ...settings,
-                          business: { ...settings.business, closeTime: e.target.value },
+                          business: {
+                            ...settings.business,
+                            openTime: "11:00",
+                            closeTime: "23:00",
+                            deliveryFee: 5.0,
+                            minimumOrder: 25.0,
+                          },
                         })
                       }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    />
-                  </div>
+                      className="bg-white p-3 rounded border text-left hover:bg-blue-50 transition-colors"
+                    >
+                      <p className="font-medium text-sm">Restaurante</p>
+                      <p className="text-xs text-gray-600">11h às 23h - Entrega R$5</p>
+                    </button>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Taxa de Entrega (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={settings.business.deliveryFee}
-                      onChange={(e) =>
+                    <button
+                      onClick={() =>
                         setSettings({
                           ...settings,
-                          business: { ...settings.business, deliveryFee: Number.parseFloat(e.target.value) || 0 },
+                          business: {
+                            ...settings.business,
+                            openTime: "18:00",
+                            closeTime: "02:00",
+                            deliveryFee: 8.0,
+                            minimumOrder: 30.0,
+                          },
                         })
                       }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      placeholder="5.00"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pedido Mínimo (R$)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={settings.business.minimumOrder}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          business: { ...settings.business, minimumOrder: Number.parseFloat(e.target.value) || 0 },
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      placeholder="20.00"
-                    />
+                      className="bg-white p-3 rounded border text-left hover:bg-blue-50 transition-colors"
+                    >
+                      <p className="font-medium text-sm">Delivery Noturno</p>
+                      <p className="text-xs text-gray-600">18h às 2h - Entrega R$8</p>
+                    </button>
                   </div>
                 </div>
 
-                {/* Funcionalidades */}                  <div className="mt-8">
+                {/* Horários de Funcionamento */}
+                <div>
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Horários de Funcionamento</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="openTime">Horário de Abertura</Label>
+                      <Input
+                        id="openTime"
+                        type="time"
+                        value={settings.business.openTime}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            business: { ...settings.business, openTime: e.target.value },
+                          })
+                        }
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="closeTime">Horário de Encerramento da Loja</Label>
+                      <Input
+                        id="closeTime"
+                        type="time"
+                        value={settings.business.closeTime}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            business: { ...settings.business, closeTime: e.target.value },
+                          })
+                        }
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="deliveryCloseTime">Horário de Encerramento do Delivery</Label>
+                      <Input
+                        id="deliveryCloseTime"
+                        type="time"
+                        value={settings.business.deliveryCloseTime}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            business: { ...settings.business, deliveryCloseTime: e.target.value },
+                          })
+                        }
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="pickupCloseTime">Horário de Encerramento da Retirada</Label>
+                      <Input
+                        id="pickupCloseTime"
+                        type="time"
+                        value={settings.business.pickupCloseTime}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            business: { ...settings.business, pickupCloseTime: e.target.value },
+                          })
+                        }
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Configurações de Entrega */}
+                <div>
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Configurações de Entrega</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="deliveryFee">Taxa de Entrega (R$)</Label>
+                      <Input
+                        id="deliveryFee"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={settings.business.deliveryFee}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            business: { ...settings.business, deliveryFee: Number.parseFloat(e.target.value) || 0 },
+                          })
+                        }
+                        className="mt-1"
+                        placeholder="5.00"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="minimumOrder">Pedido Mínimo (R$)</Label>
+                      <Input
+                        id="minimumOrder"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={settings.business.minimumOrder}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            business: { ...settings.business, minimumOrder: Number.parseFloat(e.target.value) || 0 },
+                          })
+                        }
+                        className="mt-1"
+                        placeholder="20.00"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Funcionalidades */}
+                <div className="mt-8">
                   <h4 className="text-md font-medium text-gray-900 mb-4">Funcionalidades</h4>
                   <div className="space-y-4">
                     {[
@@ -700,24 +771,9 @@ export default function RestaurantSettings() {
                         </label>
                       </div>
                     ))}
-                    
-                    {/* Link para configurações avançadas de delivery */}
-                    <div className="p-4 border rounded-lg bg-orange-50">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h5 className="font-medium text-gray-900">Configurações Avançadas de Delivery</h5>
-                          <p className="text-sm text-gray-600">Configure taxas de entrega por distância e localização</p>
-                        </div>
-                        <Link
-                          href="/dashboard/settings/delivery"
-                          className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors"
-                        >
-                          Configurar
-                        </Link>
-                      </div>
-                    </div>
                   </div>
-                </div>              </div>
+                </div>
+              </div>
             )}
 
             {/* Informações */}
@@ -732,79 +788,85 @@ export default function RestaurantSettings() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Restaurante</label>
-                    <input
+                    <Label htmlFor="restaurantName">Nome do Restaurante</Label>
+                    <Input
+                      id="restaurantName"
                       type="text"
                       value={restaurantInfo.name}
                       onChange={(e) => setRestaurantInfo({ ...restaurantInfo, name: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="mt-1"
                       placeholder="Nome do seu restaurante"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nome do Proprietário</label>
-                    <input
+                    <Label htmlFor="ownerName">Nome do Proprietário</Label>
+                    <Input
+                      id="ownerName"
                       type="text"
                       value={restaurantInfo.ownerName}
                       onChange={(e) => setRestaurantInfo({ ...restaurantInfo, ownerName: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="mt-1"
                       placeholder="Seu nome"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
-                    <input
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
                       type="tel"
                       value={restaurantInfo.phone}
                       onChange={(e) => setRestaurantInfo({ ...restaurantInfo, phone: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="mt-1"
                       placeholder="(11) 99999-9999"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Endereço</label>
-                    <input
+                    <Label htmlFor="address">Endereço</Label>
+                    <Input
+                      id="address"
                       type="text"
                       value={restaurantInfo.address}
                       onChange={(e) => setRestaurantInfo({ ...restaurantInfo, address: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="mt-1"
                       placeholder="Rua, número, bairro"
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-                    <textarea
+                    <Label htmlFor="description">Descrição</Label>
+                    <Textarea
+                      id="description"
                       value={restaurantInfo.description}
                       onChange={(e) => setRestaurantInfo({ ...restaurantInfo, description: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="mt-1"
                       placeholder="Descreva seu restaurante..."
                       rows={3}
                     />
                   </div>
 
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Logo do Restaurante</label>
-                    <input
+                  <div className="md:col-span-2">
+                    <Label htmlFor="logo">Logo do Restaurante</Label>
+                    <Input
+                      id="logo"
                       type="text"
                       value={restaurantInfo.logo}
                       onChange={(e) => setRestaurantInfo({ ...restaurantInfo, logo: e.target.value })}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="mt-1"
                       placeholder="https://exemplo.com/logo.png"
                     />
                     <p className="text-xs text-gray-500 mt-1">URL da imagem do logo (recomendado: 200x200px)</p>
                     {restaurantInfo.logo && (
                       <div className="mt-2">
                         <img
-                          src={restaurantInfo.logo}
+                          src={restaurantInfo.logo || "/placeholder.svg"}
                           alt="Logo do restaurante"
                           className="h-24 w-24 object-contain rounded-md border"
                           onError={(e) => {
-                            console.log("🖼️ [SETTINGS] Erro ao carregar logo do restaurante");
-                            e.currentTarget.src = "/placeholder.svg?height=96&width=96";
+                            console.log("🖼️ [SETTINGS] Erro ao carregar logo do restaurante")
+                            e.currentTarget.src = "/placeholder.svg?height=96&width=96"
                           }}
                         />
                       </div>
@@ -820,80 +882,77 @@ export default function RestaurantSettings() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Gestão de Mesas</h3>
-                    {/* Ações em Lote para Mesas */}
-                    {Object.keys(tables).length > 0 && (
-                      <div className="bg-green-50 p-4 rounded-lg mb-6">
-                        <h4 className="font-medium text-green-900 mb-3">Ações Rápidas</h4>
-                        <div className="flex flex-wrap gap-3">
-                          <button
-                            onClick={async () => {
-                              if (!confirm("Gerar 10 mesas padrão (1-10, capacidade 4)?")) return
-                              try {
-                                for (let i = 1; i <= 10; i++) {
-                                  const tableId = `table${i}`
-                                  const tableData = {
-                                    number: i,
-                                    capacity: 4,
-                                    status: "available" as const,
-                                  }
-                                  const tableRef = ref(database, `restaurants/${restaurantId}/tables/${tableId}`)
-                                  await update(tableRef, tableData)
-                                }
-                                alert("10 mesas criadas com sucesso!")
-                              } catch (error) {
-                                alert("Erro ao criar mesas em lote")
-                              }
-                            }}
-                            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
-                          >
-                            Criar 10 Mesas
-                          </button>
-
-                          <button
-                            onClick={async () => {
-                              if (!confirm("Marcar todas as mesas como disponíveis?")) return
-                              try {
-                                const updates: any = {}
-                                Object.keys(tables).forEach((tableId) => {
-                                  updates[`restaurants/${restaurantId}/tables/${tableId}/status`] = "available"
-                                })
-                                await update(ref(database), updates)
-                                alert("Todas as mesas marcadas como disponíveis!")
-                              } catch (error) {
-                                alert("Erro ao atualizar mesas")
-                              }
-                            }}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                          >
-                            Liberar Todas
-                          </button>
-                        </div>
-                      </div>
-                    )}
                     <p className="text-gray-600">
                       Configure as mesas do seu restaurante para gerar QR Codes específicos.
                     </p>
                   </div>
-                  <button
-                    onClick={() => setShowAddTable(true)}
-                    className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
-                  >
+                  <Button onClick={() => setShowAddTable(true)} className="flex items-center space-x-2">
                     <Plus className="h-4 w-4" />
                     <span>Adicionar Mesa</span>
-                  </button>
+                  </Button>
                 </div>
+
+                {/* Ações em Lote para Mesas */}
+                {Object.keys(tables).length > 0 && (
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-green-900 mb-3">Ações Rápidas</h4>
+                    <div className="flex flex-wrap gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          if (!confirm("Gerar 10 mesas padrão (1-10, capacidade 4)?")) return
+                          try {
+                            for (let i = 1; i <= 10; i++) {
+                              const tableId = `table${i}`
+                              const tableData = {
+                                number: i,
+                                capacity: 4,
+                                status: "available" as const,
+                              }
+                              const tableRef = ref(database, `restaurants/${restaurantId}/tables/${tableId}`)
+                              await update(tableRef, tableData)
+                            }
+                            alert("10 mesas criadas com sucesso!")
+                          } catch (error) {
+                            alert("Erro ao criar mesas em lote")
+                          }
+                        }}
+                        className="bg-green-600 text-white hover:bg-green-700"
+                      >
+                        Criar 10 Mesas
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          if (!confirm("Marcar todas as mesas como disponíveis?")) return
+                          try {
+                            const updates: any = {}
+                            Object.keys(tables).forEach((tableId) => {
+                              updates[`restaurants/${restaurantId}/tables/${tableId}/status`] = "available"
+                            })
+                            await update(ref(database), updates)
+                            alert("Todas as mesas marcadas como disponíveis!")
+                          } catch (error) {
+                            alert("Erro ao atualizar mesas")
+                          }
+                        }}
+                        className="bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        Liberar Todas
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {Object.keys(tables).length === 0 ? (
                   <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
                     <TableIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h4 className="text-lg font-medium text-gray-900 mb-2">Nenhuma mesa cadastrada</h4>
                     <p className="text-gray-500 mb-4">Adicione mesas para gerar QR Codes específicos para cada uma.</p>
-                    <button
-                      onClick={() => setShowAddTable(true)}
-                      className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
-                    >
-                      Adicionar Primeira Mesa
-                    </button>
+                    <Button onClick={() => setShowAddTable(true)}>Adicionar Primeira Mesa</Button>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -958,45 +1017,41 @@ export default function RestaurantSettings() {
 
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Número da Mesa</label>
-                          <input
+                          <Label htmlFor="tableNumber">Número da Mesa</Label>
+                          <Input
+                            id="tableNumber"
                             type="number"
                             min="1"
                             value={newTable.number}
                             onChange={(e) => setNewTable({ ...newTable, number: Number.parseInt(e.target.value) || 1 })}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            className="mt-1"
                             placeholder="1"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Capacidade (pessoas)</label>
-                          <input
+                          <Label htmlFor="tableCapacity">Capacidade (pessoas)</Label>
+                          <Input
+                            id="tableCapacity"
                             type="number"
                             min="1"
                             value={newTable.capacity}
                             onChange={(e) =>
                               setNewTable({ ...newTable, capacity: Number.parseInt(e.target.value) || 2 })
                             }
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            className="mt-1"
                             placeholder="2"
                           />
                         </div>
                       </div>
 
                       <div className="flex space-x-4 mt-6">
-                        <button
-                          onClick={() => setShowAddTable(false)}
-                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
+                        <Button variant="outline" onClick={() => setShowAddTable(false)} className="flex-1">
                           Cancelar
-                        </button>
-                        <button
-                          onClick={addTable}
-                          className="flex-1 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
-                        >
+                        </Button>
+                        <Button onClick={addTable} className="flex-1">
                           Adicionar
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -1018,19 +1073,16 @@ export default function RestaurantSettings() {
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <h4 className="font-medium text-gray-900 mb-3">Link do Cardápio</h4>
                   <div className="flex items-center space-x-3">
-                    <input
+                    <Input
                       type="text"
                       value={`${window.location.origin}/${restaurantSlug}`}
                       readOnly
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white"
+                      className="flex-1 bg-white"
                     />
-                    <button
-                      onClick={copyMenuLink}
-                      className="flex items-center space-x-2 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
-                    >
+                    <Button onClick={copyMenuLink} className="flex items-center space-x-2">
                       <Copy className="h-4 w-4" />
                       <span>Copiar</span>
-                    </button>
+                    </Button>
                   </div>
                   <p className="text-sm text-gray-600 mt-2">
                     Compartilhe este link para que os clientes acessem seu cardápio digital.
@@ -1042,13 +1094,13 @@ export default function RestaurantSettings() {
                   <h4 className="font-medium text-gray-900 mb-3">QR Codes</h4>
                   <div className="space-y-4">
                     <div>
-                      <button
+                      <Button
                         onClick={() => generateQRCode()}
-                        className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                        className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
                       >
                         <QrCode className="h-4 w-4" />
                         <span>QR Code Geral</span>
-                      </button>
+                      </Button>
                       <p className="text-sm text-gray-600 mt-1">QR Code para acesso geral ao cardápio</p>
                     </div>
 
@@ -1059,14 +1111,16 @@ export default function RestaurantSettings() {
                           {Object.values(tables)
                             .sort((a, b) => a.number - b.number)
                             .map((table) => (
-                              <button
+                              <Button
                                 key={table.number}
+                                variant="outline"
+                                size="sm"
                                 onClick={() => generateQRCode(table.number)}
-                                className="flex items-center space-x-1 bg-gray-200 text-gray-700 px-3 py-1 rounded-lg hover:bg-gray-300 transition-colors text-sm"
+                                className="flex items-center space-x-1"
                               >
                                 <QrCode className="h-3 w-3" />
                                 <span>Mesa {table.number}</span>
-                              </button>
+                              </Button>
                             ))}
                         </div>
                         <p className="text-sm text-gray-600 mt-2">

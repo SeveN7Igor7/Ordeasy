@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { database } from "@/lib/firebase"
-import { ref, push, serverTimestamp } from "firebase/database"
-import { Dialog } from "@/components/ui/dialog"
+import { ref, push } from "firebase/database"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Truck, Home, X, Check, Loader2, CreditCard, Wallet, QrCode, Banknote } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Truck, Home, X, Loader2, CreditCard, Wallet, QrCode, Banknote, ChevronDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { useCustomerAuth } from "@/lib/customer-auth-context"
 
 interface DeliveryOrderConfirmationProps {
   restaurantId: string
@@ -25,14 +26,16 @@ export default function DeliveryOrderConfirmation({
   onClose,
   onSuccess
 }: DeliveryOrderConfirmationProps) {
+  const { user: customerUser, loading: customerLoading, addAddress } = useCustomerAuth()
   const [activeTab, setActiveTab] = useState<"delivery" | "pickup">("delivery")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
   // Informações do cliente
-  const [customerName, setCustomerName] = useState("")
-  const [customerPhone, setCustomerPhone] = useState("+55 ")
+  const [customerName, setCustomerName] = useState(customerUser?.name || "")
+  const [customerPhone, setCustomerPhone] = useState(customerUser?.phone || "+55 ")
   const [additionalInfo, setAdditionalInfo] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState("")
   
   // Informações de endereço
   const [cep, setCep] = useState("")
@@ -42,42 +45,37 @@ export default function DeliveryOrderConfirmation({
   const [neighborhood, setNeighborhood] = useState("")
   const [city, setCity] = useState("")
   const [state, setState] = useState("")
-  
-  // Forma de pagamento
-  const [paymentMethod, setPaymentMethod] = useState<"credit" | "debit" | "pix" | "cash" | null>(null)
-  
-  // Buscar endereço pelo CEP
-  const fetchAddressByCep = async () => {
-    if (cep.length < 8) return
-    
-    try {
-      setLoading(true)
-      const response = await fetch(`https://viacep.com.br/ws/${cep.replace(/\D/g, '')}/json/`)
-      const data = await response.json()
-      
-      if (data.erro) {
-        setError("CEP não encontrado")
-      } else {
-        setStreet(data.logradouro || "")
-        setNeighborhood(data.bairro || "")
-        setCity(data.localidade || "")
-        setState(data.uf || "")
-        setError(null)
-      }
-    } catch (error) {
-      setError("Erro ao buscar CEP")
-      console.error("Erro ao buscar CEP:", error)
-    } finally {
-      setLoading(false)
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
+  const [saveAsDefault, setSaveAsDefault] = useState(false)
+  const [showSaveAddressOption, setShowSaveAddressOption] = useState(false)
+
+  useEffect(() => {
+    if (customerUser && customerUser.addresses && customerUser.addresses.length > 0) {
+      const defaultAddress = customerUser.addresses.find(addr => addr.isDefault) || customerUser.addresses[0]
+      setSelectedAddressId(defaultAddress.id)
+      setCep(defaultAddress.cep)
+      setStreet(defaultAddress.street)
+      setNumber(defaultAddress.number)
+      setComplement(defaultAddress.complement || "")
+      setNeighborhood(defaultAddress.neighborhood)
+      setCity(defaultAddress.city)
+      setState(defaultAddress.state)
+    }
+  }, [customerUser])
+
+  const handleAddressChange = (addressId: string) => {
+    setSelectedAddressId(addressId)
+    const selectedAddress = customerUser?.addresses.find(addr => addr.id === addressId)
+    if (selectedAddress) {
+      setCep(selectedAddress.cep)
+      setStreet(selectedAddress.street)
+      setNumber(selectedAddress.number)
+      setComplement(selectedAddress.complement || "")
+      setNeighborhood(selectedAddress.neighborhood)
+      setCity(selectedAddress.city)
+      setState(selectedAddress.state)
     }
   }
-  
-  // Efeito para buscar CEP quando digitado
-  useEffect(() => {
-    if (cep.replace(/\D/g, '').length === 8) {
-      fetchAddressByCep()
-    }
-  }, [cep])
   
   // Formatar CEP
   const formatCep = (value: string) => {
@@ -85,6 +83,25 @@ export default function DeliveryOrderConfirmation({
       .replace(/\D/g, '')
       .replace(/(\d{5})(\d)/, '$1-$2')
       .substring(0, 9)
+  }
+  
+  // Buscar endereço automaticamente quando o CEP tiver 8 dígitos
+  const fetchAddressByCep = async (cep: string) => {
+    if (cep.replace(/\D/g, '').length !== 8) return
+    
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep.replace(/\D/g, '')}/json/`)
+      const data = await response.json()
+      
+      if (!data.erro) {
+        setStreet(data.logradouro || "")
+        setNeighborhood(data.bairro || "")
+        setCity(data.localidade || "")
+        setState(data.uf || "")
+      }
+    } catch (error) {
+      console.error("Erro ao buscar CEP:", error)
+    }
   }
   
   // Formatar telefone
@@ -103,9 +120,9 @@ export default function DeliveryOrderConfirmation({
   
   // Formatar valor monetário
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL"
     }).format(value)
   }
   
@@ -115,7 +132,7 @@ export default function DeliveryOrderConfirmation({
     const commonValidation = 
       customerName.trim() !== "" && 
       customerPhone.replace(/\D/g, '').length >= 13 &&
-      paymentMethod !== null;
+      paymentMethod !== "";
     
     // Verificações específicas para delivery
     if (activeTab === "delivery") {
@@ -148,7 +165,8 @@ export default function DeliveryOrderConfirmation({
         additionalInfo: additionalInfo.trim() || null,
         timestamp: Date.now(),
         status: "pending",
-        visto: false
+        visto: false,
+        customerId: customerUser?.id || null
       }
       
       if (activeTab === "delivery") {
@@ -160,6 +178,26 @@ export default function DeliveryOrderConfirmation({
           neighborhood,
           city,
           state
+        }
+        
+        // Se o usuário está logado e escolheu salvar o endereço
+        if (customerUser && saveAsDefault && selectedAddressId === "new") {
+          try {
+            await addAddress({
+              name: "Endereço Principal",
+              cep: cep.replace(/\D/g, ''),
+              street,
+              number,
+              complement: complement.trim() || "",
+              neighborhood,
+              city,
+              state,
+              isDefault: true
+            })
+          } catch (error) {
+            console.error("Erro ao salvar endereço:", error)
+            // Não impedir o pedido se falhar ao salvar o endereço
+          }
         }
       }
       
@@ -176,318 +214,322 @@ export default function DeliveryOrderConfirmation({
   }
   
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-in fade-in duration-300">
-          {/* Cabeçalho */}
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Finalizar Pedido</h1>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-500"
-            >
-              <span className="sr-only">Fechar</span>
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-          
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Cabeçalho fixo */}
+        <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-white">
+          <h1 className="text-xl font-bold text-gray-900">Finalizar Pedido</h1>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500 p-1"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        
+        {/* Conteúdo com scroll */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Tabs para escolher entre delivery e retirada */}
-          <Tabs defaultValue="delivery" className="w-full mb-6" onValueChange={(value) => setActiveTab(value as "delivery" | "pickup")}>
+          <Tabs defaultValue="delivery" className="w-full" onValueChange={(value) => setActiveTab(value as "delivery" | "pickup")}>
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="delivery" className="flex items-center">
+              <TabsTrigger value="delivery" className="flex items-center text-sm">
                 <Truck className="h-4 w-4 mr-2" />
                 Delivery
               </TabsTrigger>
-              <TabsTrigger value="pickup" className="flex items-center">
+              <TabsTrigger value="pickup" className="flex items-center text-sm">
                 <Home className="h-4 w-4 mr-2" />
                 Retirada
               </TabsTrigger>
             </TabsList>
             
             <TabsContent value="delivery" className="mt-4 space-y-4">
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <label htmlFor="customer-name-delivery" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nome completo*
                   </label>
                   <Input
-                    id="customer-name-delivery"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     placeholder="Seu nome completo"
-                    required
+                    className="h-10"
+                    disabled={!!customerUser}
                   />
                 </div>
                 
                 <div>
-                  <label htmlFor="customer-phone-delivery" className="block text-sm font-medium text-gray-700 mb-1">
-                    WhatsApp / Telefone*
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    WhatsApp*
                   </label>
                   <Input
-                    id="customer-phone-delivery"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(formatPhone(e.target.value))}
                     placeholder="+55 00 00000-0000"
-                    required
+                    className="h-10"
+                    disabled={!!customerUser}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Você será notificado sobre o status do seu pedido por WhatsApp
-                  </p>
                 </div>
                 
-                <div>
-                  <label htmlFor="cep" className="block text-sm font-medium text-gray-700 mb-1">
-                    CEP*
-                  </label>
-                  <div className="flex">
-                    <Input
-                      id="cep"
-                      value={cep}
-                      onChange={(e) => setCep(formatCep(e.target.value))}
-                      placeholder="00000-000"
-                      required
-                    />
-                    {loading && (
-                      <div className="ml-2 flex items-center">
-                        <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
+                {customerUser && customerUser.addresses && customerUser.addresses.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Selecione um endereço salvo
+                    </label>
+                    <Select value={selectedAddressId || ""} onValueChange={handleAddressChange}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Selecione um endereço" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customerUser.addresses.map(addr => (
+                          <SelectItem key={addr.id} value={addr.id}>
+                            {addr.name} - {addr.street}, {addr.number}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {(!customerUser || !customerUser.addresses || customerUser.addresses.length === 0 || selectedAddressId === "new") && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          CEP*
+                        </label>
+                        <Input
+                          value={cep}
+                          onChange={(e) => {
+                            const formattedCep = formatCep(e.target.value)
+                            setCep(formattedCep)
+                            if (formattedCep.replace(/\D/g, '').length === 8) {
+                              fetchAddressByCep(formattedCep)
+                            }
+                          }}
+                          placeholder="00000-000"
+                          className="h-10"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Número*
+                        </label>
+                        <Input
+                          value={number}
+                          onChange={(e) => setNumber(e.target.value)}
+                          placeholder="123"
+                          className="h-10"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Rua*
+                      </label>
+                      <Input
+                        value={street}
+                        onChange={(e) => setStreet(e.target.value)}
+                        placeholder="Nome da rua"
+                        className="h-10"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Bairro*
+                        </label>
+                        <Input
+                          value={neighborhood}
+                          onChange={(e) => setNeighborhood(e.target.value)}
+                          placeholder="Bairro"
+                          className="h-10"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Complemento
+                        </label>
+                        <Input
+                          value={complement}
+                          onChange={(e) => setComplement(e.target.value)}
+                          placeholder="Apto, bloco"
+                          className="h-10"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Cidade*
+                        </label>
+                        <Input
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="Cidade"
+                          className="h-10"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Estado*
+                        </label>
+                        <Input
+                          value={state}
+                          onChange={(e) => setState(e.target.value)}
+                          placeholder="UF"
+                          className="h-10"
+                        />
+                      </div>
+                    </div>
+                    
+                    {customerUser && selectedAddressId === "new" && (
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="saveAsDefault"
+                          checked={saveAsDefault}
+                          onChange={(e) => setSaveAsDefault(e.target.checked)}
+                          className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                        />
+                        <label htmlFor="saveAsDefault" className="text-sm text-gray-700">
+                          Salvar este endereço como principal
+                        </label>
                       </div>
                     )}
-                  </div>
-                  {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="street" className="block text-sm font-medium text-gray-700 mb-1">
-                      Rua*
-                    </label>
-                    <Input
-                      id="street"
-                      value={street}
-                      onChange={(e) => setStreet(e.target.value)}
-                      placeholder="Nome da rua"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="number" className="block text-sm font-medium text-gray-700 mb-1">
-                      Número*
-                    </label>
-                    <Input
-                      id="number"
-                      value={number}
-                      onChange={(e) => setNumber(e.target.value)}
-                      placeholder="123"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div>
-                  <label htmlFor="complement" className="block text-sm font-medium text-gray-700 mb-1">
-                    Complemento
-                  </label>
-                  <Input
-                    id="complement"
-                    value={complement}
-                    onChange={(e) => setComplement(e.target.value)}
-                    placeholder="Apto, bloco, referência, etc."
-                  />
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label htmlFor="neighborhood" className="block text-sm font-medium text-gray-700 mb-1">
-                      Bairro*
-                    </label>
-                    <Input
-                      id="neighborhood"
-                      value={neighborhood}
-                      onChange={(e) => setNeighborhood(e.target.value)}
-                      placeholder="Bairro"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                      Cidade*
-                    </label>
-                    <Input
-                      id="city"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="Cidade"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
-                      Estado*
-                    </label>
-                    <Input
-                      id="state"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      placeholder="UF"
-                      required
-                    />
-                  </div>
-                </div>
+                  </>
+                )}
+
+                {customerUser && customerUser.addresses && customerUser.addresses.length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setSelectedAddressId("new")}
+                    className="w-full"
+                  >
+                    Adicionar novo endereço
+                  </Button>
+                )}
               </div>
             </TabsContent>
             
             <TabsContent value="pickup" className="mt-4 space-y-4">
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <label htmlFor="customer-name-pickup" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Nome completo*
                   </label>
                   <Input
-                    id="customer-name-pickup"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     placeholder="Seu nome completo"
-                    required
+                    className="h-10"
+                    disabled={!!customerUser}
                   />
                 </div>
                 
                 <div>
-                  <label htmlFor="customer-phone-pickup" className="block text-sm font-medium text-gray-700 mb-1">
-                    WhatsApp / Telefone*
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    WhatsApp*
                   </label>
                   <Input
-                    id="customer-phone-pickup"
                     value={customerPhone}
                     onChange={(e) => setCustomerPhone(formatPhone(e.target.value))}
                     placeholder="+55 00 00000-0000"
-                    required
+                    className="h-10"
+                    disabled={!!customerUser}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Você será notificado sobre o status do seu pedido por WhatsApp
-                  </p>
                 </div>
               </div>
             </TabsContent>
           </Tabs>
           
-          {/* Forma de pagamento */}
-          <div className="mb-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-3">Forma de pagamento*</h2>
-            
-            <div className="grid grid-cols-1 gap-3">
-              <button
-                onClick={() => setPaymentMethod("credit")}
-                className={`flex items-center p-3 border-2 rounded-lg transition-colors ${
-                  paymentMethod === "credit"
-                    ? "border-orange-500 bg-orange-50"
-                    : "border-gray-200 hover:border-orange-500 hover:bg-orange-50"
-                }`}
-              >
-                <div className="bg-orange-100 p-2 rounded-full mr-3">
-                  <CreditCard className="h-5 w-5 text-orange-600" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-medium text-gray-900">Maquininha Crédito</h3>
-                </div>
-              </button>
-              
-              <button
-                onClick={() => setPaymentMethod("debit")}
-                className={`flex items-center p-3 border-2 rounded-lg transition-colors ${
-                  paymentMethod === "debit"
-                    ? "border-orange-500 bg-orange-50"
-                    : "border-gray-200 hover:border-orange-500 hover:bg-orange-50"
-                }`}
-              >
-                <div className="bg-orange-100 p-2 rounded-full mr-3">
-                  <Wallet className="h-5 w-5 text-orange-600" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-medium text-gray-900">Maquininha Débito</h3>
-                </div>
-              </button>
-              
-              <button
-                onClick={() => setPaymentMethod("pix")}
-                className={`flex items-center p-3 border-2 rounded-lg transition-colors ${
-                  paymentMethod === "pix"
-                    ? "border-orange-500 bg-orange-50"
-                    : "border-gray-200 hover:border-orange-500 hover:bg-orange-50"
-                }`}
-              >
-                <div className="bg-orange-100 p-2 rounded-full mr-3">
-                  <QrCode className="h-5 w-5 text-orange-600" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-medium text-gray-900">Pix</h3>
-                </div>
-              </button>
-              
-              <button
-                onClick={() => setPaymentMethod("cash")}
-                className={`flex items-center p-3 border-2 rounded-lg transition-colors ${
-                  paymentMethod === "cash"
-                    ? "border-orange-500 bg-orange-50"
-                    : "border-gray-200 hover:border-orange-500 hover:bg-orange-50"
-                }`}
-              >
-                <div className="bg-orange-100 p-2 rounded-full mr-3">
-                  <Banknote className="h-5 w-5 text-orange-600" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-medium text-gray-900">Dinheiro</h3>
-                </div>
-              </button>
-            </div>
+          {/* Forma de pagamento como dropdown */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Forma de pagamento*
+            </label>
+            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Selecione a forma de pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="credit">
+                  <div className="flex items-center">
+                    <CreditCard className="h-4 w-4 mr-2 text-orange-600" />
+                    Cartão de Crédito
+                  </div>
+                </SelectItem>
+                <SelectItem value="debit">
+                  <div className="flex items-center">
+                    <Wallet className="h-4 w-4 mr-2 text-orange-600" />
+                    Cartão de Débito
+                  </div>
+                </SelectItem>
+                <SelectItem value="pix">
+                  <div className="flex items-center">
+                    <QrCode className="h-4 w-4 mr-2 text-orange-600" />
+                    PIX
+                  </div>
+                </SelectItem>
+                <SelectItem value="cash">
+                  <div className="flex items-center">
+                    <Banknote className="h-4 w-4 mr-2 text-orange-600" />
+                    Dinheiro
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           {/* Informações adicionais */}
-          <div className="mb-6">
-            <label htmlFor="additional-info" className="block text-sm font-medium text-gray-700 mb-1">
-              Informações adicionais
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Observações
             </label>
             <Textarea
-              id="additional-info"
               value={additionalInfo}
               onChange={(e) => setAdditionalInfo(e.target.value)}
-              placeholder="Instruções especiais para entrega, ponto de referência, etc."
-              rows={3}
+              placeholder="Instruções especiais, ponto de referência, etc."
+              rows={2}
+              className="resize-none"
             />
           </div>
           
-          {/* Resumo do pedido */}
-          <div className="bg-gray-50 p-4 rounded-lg mb-6">
-            <h3 className="font-medium text-gray-900 mb-2">Resumo do pedido</h3>
-            <ul className="space-y-2">
+          {/* Resumo do pedido compacto */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-medium text-gray-900 mb-2 text-sm">Resumo do pedido</h3>
+            <div className="space-y-1">
               {items.map((item, index) => (
-                <li key={index} className="flex justify-between text-sm">
-                  <span>{item.quantity}x {item.name}</span>
-                  <span>{formatCurrency(item.price * item.quantity)}</span>
-                </li>
+                <div key={index} className="flex justify-between text-sm">
+                  <span className="text-gray-600">{item.quantity}x {item.name}</span>
+                  <span className="font-medium">{formatCurrency(item.price * item.quantity)}</span>
+                </div>
               ))}
-            </ul>
+            </div>
             <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-bold">
               <span>Total</span>
-              <span>{formatCurrency(totalAmount)}</span>
+              <span className="text-orange-600">{formatCurrency(totalAmount)}</span>
             </div>
           </div>
           
           {/* Erro */}
           {error && (
-            <div className="bg-red-50 text-red-800 p-3 rounded-md text-sm mb-6">
+            <div className="bg-red-50 text-red-800 p-3 rounded-md text-sm">
               {error}
             </div>
           )}
-          
-          {/* Botões */}
-          <div className="flex justify-between">
+        </div>
+        
+        {/* Rodapé fixo com botões */}
+        <div className="border-t border-gray-200 p-6 bg-white">
+          <div className="flex gap-3">
             <Button
               variant="outline"
               onClick={onClose}
               disabled={loading}
+              className="flex-1"
             >
               Cancelar
             </Button>
@@ -495,6 +537,7 @@ export default function DeliveryOrderConfirmation({
             <Button
               onClick={submitOrder}
               disabled={!canSubmitOrder() || loading}
+              className="flex-1 bg-orange-500 hover:bg-orange-600"
             >
               {loading ? (
                 <>
@@ -508,7 +551,8 @@ export default function DeliveryOrderConfirmation({
           </div>
         </div>
       </div>
-    </Dialog>
+    </div>
   )
 }
+
 

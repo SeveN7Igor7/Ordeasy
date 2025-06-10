@@ -36,12 +36,12 @@ export default function HomePage() {
               </div>
               <h1 className="ml-3 text-2xl font-bold text-gray-900">OrdEasy</h1>
             </div>
-            <nav className="flex space-x-8">
+            <nav className="flex space-x-4">
               <Link
                 href="/auth"
                 className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
               >
-                Entrar
+                Entrar (Restaurante)
               </Link>
             </nav>
           </div>
@@ -148,3 +148,5 @@ export default function HomePage() {
     </div>
   )
 }
+
+

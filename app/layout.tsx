@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { AuthProvider } from "@/lib/auth-context"
+import { CustomerAuthProvider } from "@/lib/customer-auth-context"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -20,7 +21,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={inter.className}>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <CustomerAuthProvider>
+            {children}
+          </CustomerAuthProvider>
+        </AuthProvider>
       </body>
     </html>
   )

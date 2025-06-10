@@ -28,8 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface DeliverySettings {
   enabled: boolean
-  chargeDeliveryFee: boolean
-  baseDeliveryFee: number
+  minimumOrder: number
   location: {
     address: string
     latitude: number
@@ -51,8 +50,7 @@ export default function DeliverySettings() {
 
   const [settings, setSettings] = useState<DeliverySettings>({
     enabled: true,
-    chargeDeliveryFee: true,
-    baseDeliveryFee: 5.0,
+    minimumOrder: 20.0,
     location: {
       address: "",
       latitude: 0,
@@ -61,15 +59,13 @@ export default function DeliverySettings() {
     },
     deliveryRanges: [
       { id: "range1", distance: 3, fee: 5 },
-      { id: "range2", distance: 5, fee: 8 },
-      { id: "range3", distance: 10, fee: 12 }
+      { id: "range2", distance: 5, fee: 8 }
     ]
   })
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState("general")
 
   useEffect(() => {
     if (!user || !restaurantId) {
@@ -90,8 +86,7 @@ export default function DeliverySettings() {
           const data = snapshot.val()
           setSettings({
             enabled: data.enabled ?? true,
-            chargeDeliveryFee: data.chargeDeliveryFee ?? true,
-            baseDeliveryFee: data.baseDeliveryFee ?? 5.0,
+            minimumOrder: data.minimumOrder ?? 20.0,
             location: data.location ?? {
               address: "",
               latitude: 0,
@@ -100,8 +95,7 @@ export default function DeliverySettings() {
             },
             deliveryRanges: data.deliveryRanges ?? [
               { id: "range1", distance: 3, fee: 5 },
-              { id: "range2", distance: 5, fee: 8 },
-              { id: "range3", distance: 10, fee: 12 }
+              { id: "range2", distance: 5, fee: 8 }
             ]
           })
         }
@@ -135,8 +129,8 @@ export default function DeliverySettings() {
   const addDeliveryRange = () => {
     const newId = `range${Date.now()}`
     const lastRange = settings.deliveryRanges[settings.deliveryRanges.length - 1]
-    const newDistance = lastRange ? lastRange.distance + 5 : 5
-    const newFee = lastRange ? lastRange.fee + 5 : 5
+    const newDistance = lastRange ? lastRange.distance + 2 : 3
+    const newFee = lastRange ? lastRange.fee + 3 : 5
 
     setSettings({
       ...settings,
@@ -148,6 +142,11 @@ export default function DeliverySettings() {
   }
 
   const removeDeliveryRange = (id: string) => {
+    if (settings.deliveryRanges.length <= 1) {
+      alert("Deve haver pelo menos uma faixa de entrega")
+      return
+    }
+    
     setSettings({
       ...settings,
       deliveryRanges: settings.deliveryRanges.filter(range => range.id !== id)
@@ -308,7 +307,7 @@ export default function DeliverySettings() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">
@@ -335,313 +334,198 @@ export default function DeliverySettings() {
           <p className="text-gray-600">Configure as opções de entrega e taxas por distância</p>
         </div>
 
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div className="border-b">
-            <nav className="flex space-x-8 px-6">
-              {[
-                { id: "general", label: "Geral", icon: Truck },
-                { id: "location", label: "Localização", icon: MapPin },
-                { id: "fees", label: "Taxas de Entrega", icon: Home }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 py-4 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === tab.id
-                      ? "border-orange-500 text-orange-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  <tab.icon className="h-4 w-4" />
-                  <span>{tab.label}</span>
-                </button>
+        <div className="space-y-6">
+          {/* Configurações Gerais */}
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Configurações Gerais</h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h5 className="font-medium text-gray-900">Habilitar Delivery</h5>
+                  <p className="text-sm text-gray-600">Permitir que clientes façam pedidos para entrega</p>
+                </div>
+                <Switch
+                  checked={settings.enabled}
+                  onCheckedChange={(checked) => setSettings({ ...settings, enabled: checked })}
+                />
+              </div>
+
+              <div className="p-4 border rounded-lg">
+                <Label htmlFor="minimumOrder">Pedido Mínimo (R$)</Label>
+                <div className="mt-1">
+                  <Input
+                    id="minimumOrder"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={settings.minimumOrder}
+                    onChange={(e) => setSettings({ ...settings, minimumOrder: parseFloat(e.target.value) || 0 })}
+                    placeholder="20.00"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Valor mínimo para pedidos de delivery
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Localização */}
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Localização do Restaurante</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="cep">CEP</Label>
+                <div className="flex mt-1 space-x-2">
+                  <Input
+                    id="cep"
+                    value={settings.location.cep}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      location: { ...settings.location, cep: e.target.value }
+                    })}
+                    placeholder="00000-000"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={lookupAddressByCEP}
+                    className="flex items-center space-x-2"
+                  >
+                    <MapPin className="h-4 w-4" />
+                    <span>Buscar</span>
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="address">Endereço</Label>
+                <Input
+                  id="address"
+                  value={settings.location.address}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    location: { ...settings.location, address: e.target.value }
+                  })}
+                  placeholder="Rua, número, bairro, cidade"
+                  className="mt-1"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="latitude">Latitude</Label>
+                  <Input
+                    id="latitude"
+                    type="number"
+                    step="any"
+                    value={settings.location.latitude}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      location: { ...settings.location, latitude: parseFloat(e.target.value) || 0 }
+                    })}
+                    placeholder="0.000000"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="longitude">Longitude</Label>
+                  <Input
+                    id="longitude"
+                    type="number"
+                    step="any"
+                    value={settings.location.longitude}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      location: { ...settings.location, longitude: parseFloat(e.target.value) || 0 }
+                    })}
+                    placeholder="0.000000"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={getCurrentLocation}
+                className="flex items-center space-x-2"
+              >
+                <Target className="h-4 w-4" />
+                <span>Usar Localização Atual</span>
+              </Button>
+            </div>
+          </Card>
+
+          {/* Taxas de Entrega */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Taxas de Entrega por Distância</h3>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addDeliveryRange}
+                className="flex items-center space-x-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Adicionar Faixa</span>
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {settings.deliveryRanges.map((range, index) => (
+                <div key={range.id} className="flex items-center space-x-4 p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <Label>Até {range.distance} km</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      value={range.distance}
+                      onChange={(e) => updateDeliveryRange(range.id, 'distance', parseFloat(e.target.value) || 0.1)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label>Taxa (R$)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={range.fee}
+                      onChange={(e) => updateDeliveryRange(range.id, 'fee', parseFloat(e.target.value) || 0)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => removeDeliveryRange(range.id)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               ))}
-            </nav>
-          </div>
+            </div>
 
-          <div className="p-6">
-            {/* Configurações Gerais */}
-            {activeTab === "general" && (
-              <div className="space-y-6">
+            <div className="bg-blue-50 p-4 rounded-lg mt-4">
+              <div className="flex items-start">
+                <Info className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Configurações Gerais de Delivery</h3>
-                  <p className="text-gray-600 mb-6">
-                    Configure as opções básicas para o serviço de delivery do seu restaurante.
+                  <h4 className="font-medium text-blue-900 mb-1">Como funciona</h4>
+                  <p className="text-sm text-blue-800">
+                    As taxas são calculadas automaticamente com base na distância entre o restaurante e o endereço do cliente.
+                    Configure sua localização acima para habilitar o cálculo automático.
                   </p>
                 </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h5 className="font-medium text-gray-900">Habilitar Delivery</h5>
-                      <p className="text-sm text-gray-600">Permitir que clientes façam pedidos para entrega</p>
-                    </div>
-                    <Switch
-                      checked={settings.enabled}
-                      onCheckedChange={(checked) => setSettings({ ...settings, enabled: checked })}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <h5 className="font-medium text-gray-900">Cobrar Taxa de Entrega</h5>
-                      <p className="text-sm text-gray-600">Aplicar taxa de entrega aos pedidos de delivery</p>
-                    </div>
-                    <Switch
-                      checked={settings.chargeDeliveryFee}
-                      onCheckedChange={(checked) => setSettings({ ...settings, chargeDeliveryFee: checked })}
-                    />
-                  </div>
-
-                  {settings.chargeDeliveryFee && (
-                    <div className="p-4 border rounded-lg">
-                      <div className="mb-4">
-                        <Label htmlFor="baseDeliveryFee">Taxa Base de Entrega (R$)</Label>
-                        <div className="mt-1">
-                          <Input
-                            id="baseDeliveryFee"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={settings.baseDeliveryFee}
-                            onChange={(e) => setSettings({ ...settings, baseDeliveryFee: parseFloat(e.target.value) || 0 })}
-                            placeholder="5.00"
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Taxa padrão para entregas sem cálculo por distância
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="flex items-start">
-                      <Info className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
-                      <div>
-                        <h4 className="font-medium text-blue-900 mb-1">Informação Importante</h4>
-                        <p className="text-sm text-blue-800">
-                          Configure sua localização na aba "Localização" para habilitar o cálculo de taxas por distância.
-                          Defina diferentes faixas de distância e valores na aba "Taxas de Entrega".
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
-            )}
-
-            {/* Localização */}
-            {activeTab === "location" && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Localização do Restaurante</h3>
-                  <p className="text-gray-600 mb-6">
-                    Configure a localização do seu restaurante para cálculo de distância de entrega.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="p-4 border rounded-lg">
-                    <div className="mb-4">
-                      <Label htmlFor="cep">CEP</Label>
-                      <div className="flex mt-1">
-                        <Input
-                          id="cep"
-                          type="text"
-                          value={settings.location.cep}
-                          onChange={(e) => setSettings({
-                            ...settings,
-                            location: { ...settings.location, cep: e.target.value }
-                          })}
-                          placeholder="00000-000"
-                          className="flex-1 mr-2"
-                        />
-                        <Button onClick={lookupAddressByCEP} type="button">
-                          Buscar
-                        </Button>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Digite o CEP para buscar automaticamente o endereço
-                      </p>
-                    </div>
-
-                    <div className="mb-4">
-                      <Label htmlFor="address">Endereço</Label>
-                      <div className="mt-1">
-                        <Input
-                          id="address"
-                          type="text"
-                          value={settings.location.address}
-                          onChange={(e) => setSettings({
-                            ...settings,
-                            location: { ...settings.location, address: e.target.value }
-                          })}
-                          placeholder="Rua, número, bairro, cidade"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <Label htmlFor="latitude">Latitude</Label>
-                        <div className="mt-1">
-                          <Input
-                            id="latitude"
-                            type="number"
-                            step="any"
-                            value={settings.location.latitude}
-                            onChange={(e) => setSettings({
-                              ...settings,
-                              location: { ...settings.location, latitude: parseFloat(e.target.value) || 0 }
-                            })}
-                            placeholder="0.000000"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="longitude">Longitude</Label>
-                        <div className="mt-1">
-                          <Input
-                            id="longitude"
-                            type="number"
-                            step="any"
-                            value={settings.location.longitude}
-                            onChange={(e) => setSettings({
-                              ...settings,
-                              location: { ...settings.location, longitude: parseFloat(e.target.value) || 0 }
-                            })}
-                            placeholder="0.000000"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={getCurrentLocation}
-                      type="button"
-                      className="w-full flex items-center justify-center"
-                    >
-                      <Target className="h-4 w-4 mr-2" />
-                      Obter Localização Atual
-                    </Button>
-                  </div>
-
-                  <div className="bg-yellow-50 p-4 rounded-lg">
-                    <div className="flex items-start">
-                      <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
-                      <div>
-                        <h4 className="font-medium text-yellow-900 mb-1">Permissão de Localização</h4>
-                        <p className="text-sm text-yellow-800">
-                          Para usar a localização atual, você precisa permitir o acesso à sua localização no navegador.
-                          Esta informação é usada apenas para calcular distâncias de entrega.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Taxas de Entrega */}
-            {activeTab === "fees" && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Taxas de Entrega por Distância</h3>
-                  <p className="text-gray-600 mb-6">
-                    Configure diferentes taxas de entrega baseadas na distância do cliente até o restaurante.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="bg-white border rounded-lg overflow-hidden">
-                    <div className="px-4 py-3 bg-gray-50 border-b">
-                      <div className="grid grid-cols-12 gap-4">
-                        <div className="col-span-5 font-medium text-gray-700">Distância (km)</div>
-                        <div className="col-span-5 font-medium text-gray-700">Taxa (R$)</div>
-                        <div className="col-span-2 text-right font-medium text-gray-700">Ações</div>
-                      </div>
-                    </div>
-
-                    <div className="divide-y">
-                      {settings.deliveryRanges.map((range) => (
-                        <div key={range.id} className="px-4 py-3">
-                          <div className="grid grid-cols-12 gap-4 items-center">
-                            <div className="col-span-5">
-                              <div className="flex items-center">
-                                <span className="text-gray-500 mr-2">Até</span>
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  step="0.1"
-                                  value={range.distance}
-                                  onChange={(e) => updateDeliveryRange(range.id, 'distance', parseFloat(e.target.value) || 0)}
-                                  className="w-20"
-                                />
-                                <span className="text-gray-500 ml-2">km</span>
-                              </div>
-                            </div>
-                            <div className="col-span-5">
-                              <div className="flex items-center">
-                                <span className="text-gray-500 mr-2">R$</span>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.5"
-                                  value={range.fee}
-                                  onChange={(e) => updateDeliveryRange(range.id, 'fee', parseFloat(e.target.value) || 0)}
-                                  className="w-20"
-                                />
-                              </div>
-                            </div>
-                            <div className="col-span-2 text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeDeliveryRange(range.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="px-4 py-3 bg-gray-50 border-t">
-                      <Button
-                        onClick={addDeliveryRange}
-                        type="button"
-                        variant="outline"
-                        className="w-full flex items-center justify-center"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Adicionar Faixa de Distância
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="flex items-start">
-                      <Info className="h-5 w-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
-                      <div>
-                        <h4 className="font-medium text-green-900 mb-1">Como Funciona</h4>
-                        <p className="text-sm text-green-800">
-                          O sistema calculará automaticamente a distância entre o cliente e o restaurante usando o CEP informado.
-                          A taxa de entrega será aplicada com base na faixa de distância correspondente.
-                          Por exemplo, se um cliente estiver a 4km de distância e você tiver uma faixa "Até 5km: R$8", 
-                          será cobrada uma taxa de R$8.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          </Card>
         </div>
       </div>
     </div>
